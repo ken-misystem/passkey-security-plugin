@@ -1,0 +1,66 @@
+<div class="staff-login-shell">
+<header class="staff-login-heading">
+<p class="eyebrow">スタッフ専用</p>
+<h1>{{ signed_in ? '追加の本人確認' : '管理画面にログイン' }}</h1>
+<p class="lead">{{ signed_in ? '登録済みの方法で確認してください。' : 'パスキー、またはID・パスワードを使います。' }}</p>
+</header>
+<section class="card staff-login-card" aria-label="本人確認の操作">
+{% if signed_in and active_count > 0 and has_totp %}
+<div class="staff-method-tabs" role="tablist" aria-label="本人確認の方法">
+<button type="button" id="staff-method-passkey" role="tab" aria-controls="staff-panel-passkey" aria-selected="true" tabindex="0">パスキー</button>
+<button type="button" id="staff-method-totp" role="tab" aria-controls="staff-panel-totp" aria-selected="false" tabindex="-1">認証アプリ</button>
+</div>
+{% endif %}
+{% if not signed_in or active_count > 0 %}
+<div id="staff-panel-passkey"{% if signed_in and has_totp %} role="tabpanel" aria-labelledby="staff-method-passkey"{% endif %}>
+{% if not signed_in or not has_totp %}<h2>パスキーで本人確認</h2>{% endif %}<p class="staff-method-description">ボタンを押し、端末の指紋・顔認証・PINで確認してください。</p>
+</div>
+{% endif %}
+{% if signed_in and has_totp %}
+<div id="staff-panel-totp"{% if active_count > 0 %} role="tabpanel" aria-labelledby="staff-method-totp" hidden{% endif %}>
+{% if active_count == 0 %}<h2>認証アプリで本人確認</h2>{% endif %}<p class="staff-method-description">認証アプリの6桁コードを入力してください。</p>
+{% if totp_password_required|default(false) %}<div id="totp-password-required"><p class="muted">本人確認から時間が経ったため、現在のパスワードも入力してください。変更はされません。</p><label for="staff-password">現在のパスワード</label><input type="password" id="staff-password" autocomplete="current-password"></div>{% endif %}
+<label for="code">認証アプリの6桁コード</label><input type="text" id="code" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" autocomplete="one-time-code" placeholder="123456" aria-describedby="totp-code-help"><p id="totp-code-help" class="muted">このサイトの新しい6桁コードを入力してください。一度使った数字は、切り替わるまで使えません。</p>
+</div>
+{% endif %}
+<div class="staff-login-submit">
+{% if not signed_in %}<button type="button" id="login-passkey">パスキーでログイン</button>
+{% else %}
+{% if active_count > 0 %}<button type="button" id="verify">本人確認して管理画面へ</button>{% endif %}
+{% if has_totp %}<button type="button" id="totp-verify"{% if active_count > 0 %} hidden{% endif %}>{{ staff_passkey_required|default(false) ? '認証アプリのコードを確認する' : 'コードを確認して管理画面へ' }}</button>{% endif %}
+{% endif %}
+</div>
+<p id="status" class="status" role="status" aria-live="polite" tabindex="-1"></p>
+</section>
+<nav class="staff-login-nav" aria-label="ログインのご案内"><a class="button" href="{{ path('ps_staff_initial_request') }}">初回登録リンク・コードを依頼する</a><a id="security-back" href="{{ login_url }}">ID・パスワードの入力へ</a><a href="{{ path('ps_staff_password_reset') }}">パスワードをお忘れの方</a></nav>
+{% if not signed_in %}<p class="staff-login-password-link">パスキーを登録していない方は、<a href="{{ login_url }}">ID・パスワードでログイン</a>してください。</p>{% endif %}
+<details class="staff-login-help"><summary>ヘルプ：ログインでお困りの方</summary><div class="help-body"><ul>
+<li>{% if staff_passkey_required|default(false) %}管理画面に入るにはパスキーが必要です。認証アプリで本人確認して、パスキーの登録を進められます。{% else %}パスキーか、パスワード＋認証アプリのどちらかでログインします。毎回両方を使う必要はありません。{% endif %}</li>
+<li>アプリのコードが通らない場合は、数字が切り替わるのを待ち、スマートフォンの日時を自動設定にしてください。</li><li>端末の追加・設定変更は、管理画面にログインしてから行えます。</li>
+<li>初めての方は、まずID・パスワードを入力し、次の画面で初回登録コードを使って登録してください。認証アプリが登録済みなら、初回登録コードは不要です。</li>
+<li>パスキーと認証アプリをすべて紛失した場合は、管理担当者へ復旧を依頼してください。メールだけでは追加認証は解除されません。</li>
+</ul></div></details>
+
+<p class="footer">パスワード・確認コードは他人に伝えないでください。</p>
+</div>
+<script nonce="{{ nonce }}">
+(() => {
+  const tabs=[...document.querySelectorAll('.staff-method-tabs [role="tab"]')];
+  if(!tabs.length)return;
+  const select=tab=>{
+    const method=tab.id==='staff-method-totp'?'totp':'passkey';
+    for(const item of tabs){const selected=item===tab;item.setAttribute('aria-selected',String(selected));item.tabIndex=selected?0:-1;document.getElementById(item.getAttribute('aria-controls')).hidden=!selected;}
+    document.getElementById('verify').hidden=method!=='passkey';
+    document.getElementById('totp-verify').hidden=method!=='totp';
+  };
+  tabs.forEach((tab,index)=>{
+    tab.addEventListener('click',()=>select(tab));
+    tab.addEventListener('keydown',event=>{
+      let target;
+      if(event.key==='ArrowRight'||event.key==='ArrowLeft')target=tabs[(index+1)%tabs.length];
+      else if(event.key==='Home')target=tabs[0];else if(event.key==='End')target=tabs[tabs.length-1];
+      if(target){event.preventDefault();select(target);target.focus();}
+    });
+  });
+})();
+</script>

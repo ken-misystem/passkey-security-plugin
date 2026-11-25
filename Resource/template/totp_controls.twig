@@ -1,0 +1,30 @@
+{% if not has_totp|default(false) %}
+<p class="totp-intro">スマートフォンの認証アプリで、パスキーの代わりにログインできます。どちらか1つの登録で利用できます。</p>
+<ol id="totp-steps" class="totp-steps">
+<li>認証アプリをスマートフォンへインストールします。</li>
+<li>認証アプリの「QRコードを読み取る」を開き、スマートフォンのカメラで、この画面のQRコードを読み取って登録します。</li>
+<li>アプリに表示された6桁コードを下のフォームに入力し、「認証アプリを登録して管理画面へ」を押します。</li>
+</ol>
+<details class="totp-download-help"><summary>認証アプリのダウンロードはこちら</summary><div class="help-body">{% include '@PasskeySecurity/authenticator_downloads.twig' %}</div></details>
+<button type="button" id="totp-setup" class="secondary">登録用QRコードを表示</button>
+<div id="totp-provision" hidden>
+<p class="totp-qr-caption">認証アプリで読み取ってください</p>
+<img id="totp-qr" width="280" height="280" alt="認証アプリ登録用QRコード" hidden>
+<p class="auth-code-note">QRコード・設定キーは他の人に見せないでください。</p>
+<details id="totp-manual"><summary>同じスマートフォンで操作中・QRコードを読み取れない方</summary><div class="help-body">
+<p>同じスマートフォンでは、<a id="totp-link">この端末の認証アプリに追加</a>をお試しください。</p>
+<p>開かない場合は、アプリの「設定キーを入力」で次のキーを登録してください。</p><output id="totp-secret"></output>
+<p>手入力で方式を聞かれた場合のみ「時間ベース」を選びます。</p>
+</div></details></div>
+{% endif %}
+{% if totp_password_required|default(false) %}<div id="totp-password-required"><label for="staff-password">現在のパスワード（再確認）</label><input type="password" id="staff-password" autocomplete="current-password"></div>{% endif %}
+{% if not has_totp|default(false) and totp_password_required|default(false) %}<p class="auth-code-note" id="initial-totp-password-note">登録を完了するため、現在のパスワードをこの画面で一度確認します。パスワードの変更・再発行ではありません。</p>{% endif %}
+<label for="code">認証アプリの6桁コード</label><input type="text" id="code" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" autocomplete="one-time-code" placeholder="123456" aria-describedby="totp-code-help">
+<button type="button" id="totp-verify">{{ has_totp|default(false) ? 'コードを確認して管理画面へ' : '認証アプリを登録して管理画面へ' }}</button>
+<p class="auth-code-note" id="totp-code-help">{{ has_totp|default(false) ? 'アプリの新しい数字を入力してください。' : 'QRコードを読み取っただけでは未完了です。6桁コードの確認で登録が完了します。' }}</p>
+<details id="totp-setup-help"><summary>ヘルプ：コードが通らない・途中で中断・スマートフォンの紛失</summary><div class="help-body totp-help"><ul>
+<li>コードは約30秒で変わります。通らない場合は新しい6桁コードで試し、スマートフォンの日時を自動設定にしてください。一度使ったコードは使えません。</li>
+{% if not has_totp|default(false) %}<li>QRコードを再表示しても、登録途中は同じ設定です。アプリへ何度も追加する必要はありません。</li><li>登録の操作期限が切れた場合は、画面の案内から管理担当者へ登録の再開を依頼してください。</li>{% endif %}
+<li>現在のパスワードを求められた場合は一緒に入力します。変更・再発行は行いません。</li>
+<li>スマートフォンを紛失した場合は、登録済みのパスキーでログインするか、管理担当者へ復旧を依頼してください。パスワードの再設定だけでは解決しません。</li>
+</ul></div></details>

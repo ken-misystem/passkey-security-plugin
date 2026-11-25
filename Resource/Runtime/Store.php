@@ -145,12 +145,35 @@ final class Store
         $f = $this->factor($subject);
         if (!$f || $f['ticket'] === '' || (int)$f['expires'] < $now
             || !hash_equals($f['ticket'], $this->config->digest($ticket))) throw new \RuntimeException('security_ticket_rejected');
+        if ($this->config->usesLegacyIdentity() && $this->db->fetchOne(
+            "SELECT id FROM plg_ps_recovery WHERE subject=? AND generation=? AND status='issued'",
+            [$subject, (int)$f['generation']]
+        ) === false && (!$this->config->shopEditionActive() || !$this->initialEligible($subject, true))) {
+            throw new \RuntimeException('security_ticket_rejected');
+        }
         $n = $this->db->executeStatement("UPDATE plg_ps_factor SET ticket='' WHERE subject=? AND ticket=?", [$subject, $f['ticket']]);
         if ($n !== 1) throw new \RuntimeException('security_ticket_already_claimed');
         $this->db->executeStatement("UPDATE plg_ps_recovery SET status='claimed' WHERE subject=? AND generation=? AND status='issued'", [$subject,(int)$f['generation']]);
         $this->audit($subject, 'enrollment_ticket_claimed');
         return (int)$f['generation'];
         });
+    }
+    /** Initial enrollment only. Never turn an established factor into initial enrollment. */
+    public function allowManualInitial(string $subject, string $ticket): void
+    {
+        $factor = $this->factor($subject);
+        if (!$this->config->shopEditionActive() || !$factor || !$this->initialEligible($subject)
+            || !hash_equals($factor['ticket'], $this->config->digest($ticket))) {
+            throw new \RuntimeException('security_ticket_rejected');
+        }
+        $this->audit($subject, 'initial_manual:'.substr($factor['ticket'], 0, 40));
+    }
+    public function manualInitialAllowed(string $subject): bool
+    {
+        $factor = $this->factor($subject);
+        return $this->config->shopEditionActive() && $factor && $factor['ticket'] !== '' && $this->initialEligible($subject)
+            && (int)$this->db->fetchOne('SELECT COUNT(*) FROM plg_ps_audit WHERE subject=? AND action=?',
+                [$subject, 'initial_manual:'.substr($factor['ticket'], 0, 40)]) > 0;
     }
     /** Initial enrollment only. Never turn an established factor into initial enrollment. */
     public function initialEligible(string $subject,bool $locked=false): bool
@@ -262,7 +285,8 @@ final class Store
             if ((int)$f['generation']!==$expectedGeneration || !preg_match('/^[a-f0-9]{64}$/D',$id)) throw new \RuntimeException('security_revoke_rejected');
             $row=$this->db->fetchAssociative('SELECT id FROM plg_ps_credential WHERE id=? AND subject=? AND revoked=0',[$id,$subject]);
             if (!$row) throw new \RuntimeException('security_revoke_rejected');
-            if (str_starts_with($subject,'member:') && count($this->credentials($subject))<=1 && (int)$f['confirmed']!==1) throw new \RuntimeException('security_last_staff_factor_requires_recovery');
+            if (str_starts_with($subject,'member:') && count($this->credentials($subject))<=1 && ((int)$f['confirmed']!==1 || $this->config->staffPasskeyRequired()))
+                throw new \RuntimeException('security_last_staff_factor_requires_recovery');
             $this->db->executeStatement("UPDATE plg_ps_credential SET revoked=1, revoked_at=?, revoked_reason='self_revoke' WHERE id=? AND subject=? AND revoked=0",[$now,$id,$subject]);
             $this->db->executeStatement('UPDATE plg_ps_factor SET generation=generation+1 WHERE subject=?',[$subject]);
             $this->audit($subject,'passkey_revoked_self:'.substr($id,0,16));

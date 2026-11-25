@@ -1,34 +1,16 @@
+imports:
+    - { resource: settings.yaml }
+    - { resource: compatibility.yaml }
+
 services:
     _defaults:
         autowire: true
         autoconfigure: true
-    Plugin\PasskeySecurity\Resource\Runtime\PublicSettings: ~
     Plugin\PasskeySecurity\Resource\Runtime\Config:
         arguments:
             $applicationSecret: '%kernel.secret%'
     Plugin\PasskeySecurity\Resource\Runtime\Store: ~
     Plugin\PasskeySecurity\Resource\Runtime\Policy: ~
-    passkey_security.clock_formatter:
-        class: Monolog\Formatter\JsonFormatter
-    passkey_security.clock_handler:
-        class: Monolog\Handler\StreamHandler
-        arguments:
-            $stream: '%kernel.logs_dir%/%kernel.environment%/passkey_security_clock.jsonl'
-            $level: 300
-            $filePermission: 384
-            $useLocking: true
-        calls:
-            - [setFormatter, ['@passkey_security.clock_formatter']]
-    passkey_security.clock_logger:
-        class: Monolog\Logger
-        arguments:
-            $name: 'passkey_security_clock'
-            $handlers: ['@passkey_security.clock_handler']
-            $processors: []
-    Plugin\PasskeySecurity\Resource\Runtime\ClockEventLog:
-        arguments:
-            $logger: '@passkey_security.clock_logger'
-    Plugin\PasskeySecurity\Resource\Runtime\PublicPolicy: ~
     Plugin\PasskeySecurity\Resource\Runtime\Ceremony: ~
     Plugin\PasskeySecurity\EventSubscriber\PublicSubscriber: ~
     Plugin\PasskeySecurity\Controller\PublicController:
@@ -40,3 +22,7 @@ services:
     Plugin\PasskeySecurity\Command\RecoveryCommand:
         arguments:
             $projectDir: '%kernel.project_dir%'
+    Plugin\PasskeySecurity\Resource\Runtime\LegacyShopMigration:
+        arguments:
+            $projectDir: '%kernel.project_dir%'
+    Plugin\PasskeySecurity\Command\LegacyMigrationCommand: ~

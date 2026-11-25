@@ -19,8 +19,8 @@ final class Policy
     public function stamp(object $user, ?int $generation=null): string
     {
         $subject = self::subject($user);
-        return $this->config->digest($subject.':'.$this->store->epoch().':'.$user->getPassword().':'.
-            ($generation ?? $this->store->generation($subject)));
+        return hash_hmac('sha256', $subject.':'.$this->store->epoch().':'.$user->getPassword().':'.
+            ($generation ?? $this->store->generation($subject)), $this->config->key());
     }
     /** A request timestamp is not a decision timestamp after hashing or database work. */
     public static function decisionTime(int $previous,string $point='proof_check'):int
@@ -64,7 +64,7 @@ final class Policy
     /** Password proof for initial registration survives code issuance, but not password/epoch changes. */
     public function proveInitialPassword(SessionInterface $s,Member $user,int $now): void
     {
-        $s->set('ps_initial_password',['at'=>$now,'stamp'=>$this->config->digest('initial-password:'.self::subject($user).':'.$this->store->epoch().':'.$user->getPassword())]);
+        $s->set('ps_initial_password',['at'=>$now,'stamp'=>hash_hmac('sha256','initial-password:'.self::subject($user).':'.$this->store->epoch().':'.$user->getPassword(),$this->config->key())]);
     }
     public function initialPassword(SessionInterface $s,Member $user,int $now): bool
     {
@@ -74,7 +74,7 @@ final class Policy
         $now=self::decisionTime($now);
         $p=$s->get('ps_initial_password');
         return is_array($p)&&($p['at']??0)>=$now-1800&&($p['at']??PHP_INT_MAX)<=$now
-            &&hash_equals($this->config->digest('initial-password:'.self::subject($user).':'.$this->store->epoch().':'.$user->getPassword()),(string)($p['stamp']??''));
+            &&hash_equals(hash_hmac('sha256','initial-password:'.self::subject($user).':'.$this->store->epoch().':'.$user->getPassword(),$this->config->key()),(string)($p['stamp']??''));
     }
     public function proofGeneration(SessionInterface $s, object $user, string $name, int $now, int $ttl=300): int
     {
@@ -84,12 +84,26 @@ final class Policy
     public function complete(SessionInterface $s, object $user, int $now): bool
     {
         if ($user instanceof Customer) return !$this->store->resetRequired(self::subject($user)) && $this->fresh($s,$user,'session',$now,86400);
-        $f = $this->store->factor(self::subject($user));
-        return !$this->store->resetRequired(self::subject($user)) && $f && (
-            (count($this->store->credentials(self::subject($user))) > 0 && $this->fresh($s,$user,'passkey',$now))
-            || ((int)$f['confirmed']===1 && $this->fresh($s,$user,'password',$now) && $this->fresh($s,$user,'totp',$now))
+        $subject = self::subject($user);
+        $factor = $this->store->factor($subject);
+        if (!$factor || $this->store->resetRequired($subject)) {
+            return false;
+        }
+        $ttl = $this->config->staffSessionTtl();
+        return (count($this->store->credentials($subject)) > 0 && $this->fresh($s,$user,'passkey',$now,$ttl))
+            || ((int)$factor['confirmed']===1 && $this->fresh($s,$user,'password',$now,$ttl) && $this->fresh($s,$user,'totp',$now,$ttl)
         );
     }
+    public function staffAccess(SessionInterface $session, Member $user, int $now): bool
+    {
+        if (!$this->config->staffPasskeyRequired()) {
+            return $this->complete($session, $user, $now);
+        }
+        $subject = self::subject($user);
+        return !$this->store->resetRequired($subject) && $this->store->credentials($subject) !== []
+            && $this->fresh($session, $user, 'passkey', $now, $this->config->staffSessionTtl());
+    }
+
     public function staffProof(SessionInterface $s, object $user, int $now, int $ttl=300): string
     {
         if (!($user instanceof Member) || !$this->complete($s,$user,$now)) throw new \RuntimeException('security_staff_authentication_required');

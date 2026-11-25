@@ -1,0 +1,15 @@
+<style>
+.ec-navlistRole .ec-navlistRole__navlist{display:flex;flex-wrap:wrap}
+.ec-navlistRole .ec-navlistRole__item{width:auto;flex:1 0 140px}
+.ps-account-guide{background:#fffefa;color:#203044;border:1px solid #c9d7d9;border-left:4px solid #175e68;border-radius:8px;padding:18px 22px;margin:18px 0 26px;line-height:1.7;text-align:left}
+.ps-account-guide h2{font-size:18px;color:#203044;margin:0 0 8px;font-weight:bold}
+.ps-account-guide p{color:#203044;margin:6px 0 12px}
+.ps-account-guide a{display:inline-block;color:#fff;background:#175e68;border:1px solid #175e68;border-radius:6px;padding:10px 18px;text-decoration:none;font-weight:bold}
+.ps-account-guide a:focus-visible{outline:3px solid #b18115;outline-offset:3px}
+@media(max-width:767px){.ec-navlistRole .ec-navlistRole__item{flex-basis:50%}.ps-account-guide{padding:16px}.ps-account-guide a{display:block;text-align:center}}
+</style>
+<section class="ps-account-guide" aria-labelledby="ps-account-guide-title">
+    <h2 id="ps-account-guide-title">指紋・顔認証でログインしませんか？</h2>
+    <p>パスキーは任意の設定です。登録しなくても、これまでどおりパスワードでログインできます。安全性を高めるために登録をお願いします。</p>
+    <a href="{{ path('ps_customer') }}">パスキーを登録・管理する</a>
+</section>

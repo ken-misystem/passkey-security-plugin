@@ -1,0 +1,83 @@
+{% set compact_customer_login = kind == 'customer' and not signed_in %}
+{% set compact_staff_login = kind == 'member' and ((staff_return|default(false)) or (not complete and (not signed_in or active_count > 0 or has_totp))) %}
+<!doctype html><html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>{{ compact_staff_login ? '管理画面にログイン' : 'ログインと認証設定' }} | {{ passkey_store_appearance().name }}</title>
+{% include '@PasskeySecurity/favicon.twig' %}{% include '@PasskeySecurity/security_style.twig' %}{% if compact_staff_login %}{% include '@PasskeySecurity/staff_login_style.twig' %}{% endif %}{% if compact_customer_login %}{% include '@PasskeySecurity/customer_login_style.twig' %}{% endif %}{% include '@PasskeySecurity/auth_compact_style.twig' %}</head>
+<body class="{{ compact_staff_login ? 'staff-login-page' : (compact_customer_login ? 'customer-login-page' : 'auth-compact-page') }}"><a class="skip" href="#main">操作へ移動</a><header class="topbar">{{ passkey_store_appearance().name }} <span>{{ compact_staff_login ? '管理画面ログイン' : (compact_customer_login ? '会員ログイン' : 'アカウントの安全設定') }}</span></header><main id="main">
+{% if staff_return|default(false) %}<p class="return-brief" id="return-notice">{% if settings_passkey|default(false) %}パスキーで本人確認すると、プラグイン設定に戻ります。{% elseif settings_return|default(false) %}本人確認後、プラグイン設定に戻ります。{% else %}本人確認後、元のスタッフ設定へ戻ります。{% endif %}</p>{% endif %}
+{% if staff_initial|default(false) %}{% include '@PasskeySecurity/staff_onboarding.twig' %}
+{% elseif compact_staff_login %}{% include '@PasskeySecurity/staff_login.twig' %}
+{% elseif compact_customer_login %}{% include '@PasskeySecurity/customer_login.twig' %}
+{% else %}
+<h1>{{ kind == 'member' ? 'ログイン方法の設定・管理' : 'パスキーの登録・管理' }}</h1>
+<nav class="auth-quick-nav"><a id="security-back" href="{{ home_url }}">{{ kind == 'member' ? '管理画面へ' : 'マイページへ' }}</a><a href="#registered-devices">登録済みパスキー</a>{% if kind == 'member' %}<a href="{{ path('ps_staff_email_manage') }}">メール設定</a>{% endif %}</nav>
+{% if kind == 'member' %}<p class="auth-brief" id="staff-mfa-status"><span class="badge" data-staff-mfa-ready="{{ active_count > 0 or has_totp ? '1':'0' }}">{{ active_count > 0 or has_totp ? '追加認証は有効' : '必須・登録待ち' }}</span> 登録する方法を選んでください。</p>{% else %}<p class="auth-brief">登録は任意です。安全性を高めるために登録をお願いします。</p>{% endif %}
+{% if kind == 'member' %}{% include '@PasskeySecurity/auth_method_tabs.twig' %}{% endif %}
+<div id="auth-safety-slot"></div><div class="auth-operation-panels">
+<section class="card auth-operation-card" id="passkey-section"{% if kind == 'member' %} role="tabpanel" aria-labelledby="auth-method-passkey"{% endif %}><h2>パスキーを登録</h2>
+{% if kind == 'customer' and not can_revoke %}<label for="password">現在のパスワード</label><input type="password" id="password" autocomplete="current-password" required>{% elseif kind == 'customer' %}<p class="muted">本人確認済みです。</p><details><summary>本人確認をやり直す</summary><label for="password">現在のパスワード</label><input type="password" id="password" autocomplete="current-password"></details>{% endif %}
+<label for="passkey-label">端末の名前（任意）</label><input id="passkey-label" maxlength="80" autocomplete="off" placeholder="例：自分のスマートフォン"><button type="button" id="register">{{ kind == 'customer' and not can_revoke ? '本人確認してパスキーを登録' : 'この端末のパスキーを登録' }}</button>
+{% if kind == 'member' and active_count > 0 and not can_revoke %}<p class="muted">追加登録の前に、登録済みパスキーで本人確認してください。</p><button type="button" id="verify" class="secondary">登録済みパスキーで本人確認</button>{% endif %}
+{% if kind == 'member' %}<p class="totp-alternative"><a href="#totp-section" data-auth-alternative="totp">パスキーが登録できない方はこちら → 認証アプリを登録</a></p>{% endif %}<details><summary>ヘルプ：登録手順・Windowsの準備</summary><div class="help-body"><p>ボタンを押し、端末の指紋・顔認証・PINの案内に従ってください。共有端末への登録は避けてください。</p>{% include '@PasskeySecurity/windows_passkey_help.twig' %}</div></details></section>
+{% if kind == 'member' %}<section class="card auth-operation-card" id="totp-section" role="tabpanel" aria-labelledby="auth-method-totp"><h2>{{ has_totp ? '認証アプリで本人確認' : '認証アプリを登録' }}</h2>{% include '@PasskeySecurity/totp_controls.twig' %}</section>{% endif %}</div>
+<p id="status" class="status" role="status" aria-live="polite" tabindex="-1"></p>
+<details class="auth-bottom-help"><summary>ヘルプ：ログイン方法・追加認証について</summary><div class="help-body">{% if kind == 'member' %}<ul><li>パスキーか、パスワード＋認証アプリのどちらかでログインします。両方を毎回使う必要はありません。</li><li>登録が完了すると自動で有効になります。別途ONにする操作は不要です。</li><li>管理画面での重要な操作には、直前の本人確認を求める場合があります。</li></ul>{% else %}<p>登録後もパスワードでログインできます。パスキー登録時のパスワード入力は本人確認で、パスワードの変更ではありません。</p>{% endif %}</div></details>
+<details class="auth-bottom-help" id="registered-devices"><summary>登録済みのパスキー（有効 {{ active_count }}件）</summary><ul class="credentials">{% for c in credentials %}<li><span class="key-name">{{ c.label ?: 'パスキー' }}</span> <span class="badge">{{ c.revoked ? '失効済み' : '有効' }}</span>{% if not c.revoked and can_revoke and (kind != 'member' or active_count > 1 or (has_totp and not staff_passkey_required|default(false))) %}<button class="danger" type="button" data-revoke="{{ c.id }}">このパスキーを使えなくする</button>{% endif %}</li>{% else %}<li>まだ登録されていません。</li>{% endfor %}</ul><p class="muted">無効化には直前の本人確認が必要です。スタッフの最後の認証方法は、代わりの方法がない限り解除できません。すべて使えない場合は管理担当者へ復旧を依頼してください。</p></details>
+{% endif %}</main>
+{% include '@PasskeySecurity/auth_method_switch.twig' %}
+<script nonce="{{ nonce }}">
+(() => {
+  'use strict';
+  const endpoint={{ endpoint|json_encode|raw }}, csrf={{ csrf_token(csrf_id)|json_encode|raw }};
+  const $=id=>document.getElementById(id), status=$('status');
+  const decode=s=>Uint8Array.from(atob(s.replace(/-/g,'+').replace(/_/g,'/')),c=>c.charCodeAt(0));
+  const encode=b=>btoa(String.fromCharCode(...new Uint8Array(b))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
+  async function call(action, data={}) {
+    if(!data.turnstile_flow)status.textContent='送信前の安全確認を進めています。';
+    if(window.psTurnstile && !data.turnstile_flow)data.turnstile_token=await window.psTurnstile.take(!['register_options','login_options','verify_options'].includes(action));
+    const abort=new AbortController(),timer=setTimeout(()=>abort.abort(),12000);
+    let r,v;
+    try{r=await fetch(endpoint,{method:'POST',credentials:'same-origin',signal:abort.signal,headers:{'Content-Type':'application/json'},body:JSON.stringify({_token:csrf,action,...data})});v=await r.json();}
+    catch(e){if(e.name==='AbortError')throw new Error('サーバーからの応答を確認できませんでした。ログイン先を確認するか、時間をおいてお試しください。');throw e;}
+    finally{clearTimeout(timer);}
+     if(!r.ok || !v.ok){const e=new Error(v.error || '認証を完了できません。');if(typeof v.continue_url==='string'&&typeof v.continue_label==='string'){const u=new URL(v.continue_url,location.origin);if(u.origin===location.origin&&u.protocol==='https:'){e.continueUrl=u.href;e.continueLabel=v.continue_label;}}throw e;}
+    if(v.redirect) location.assign(v.redirect); return v;
+  }
+  function bind(id,fn){const b=$(id);if(b)b.addEventListener('click',async()=>{b.disabled=true;status.textContent='確認中です。';try{const message=await fn();status.textContent=typeof message==='string'?message:'確認できました。';}catch(e){status.textContent=e.name==='NotAllowedError'?'端末で認証を完了できませんでした。':e.message;if(e.continueUrl){const a=document.createElement('a');a.id='security-resume-link';a.href=e.continueUrl;a.textContent=e.continueLabel;status.append(document.createElement('br'),a);}status.focus({preventScroll:true});status.scrollIntoView({block:'nearest'});}finally{b.disabled=false;}});}
+  async function passkey(register, login=false){
+    if(!window.PublicKeyCredential || !navigator.credentials) throw new Error('この端末はパスキーを利用できません。');
+    const initial={};
+    if(register && $('password')){
+      if($('password').required && !$('password').value)throw new Error('現在のパスワードを入力してください。');
+      if($('password').value)initial.password=$('password').value;
+    }
+    let v;
+    try{v=await call(register?'register_options':login?'login_options':'verify_options',initial);}
+    finally{if(register && $('password'))$('password').value='';delete initial.password;}
+    const p=v.options.publicKey;
+    p.challenge=decode(p.challenge); if(p.user)p.user.id=decode(p.user.id);
+    for(const list of ['allowCredentials','excludeCredentials'])for(const c of p[list]||[])c.id=decode(c.id);
+    status.textContent=register?'端末で指紋・顔認証・PINを確認して、パスキーを登録してください。':'端末で指紋・顔認証・PINを確認してください。';
+    const c=await navigator.credentials[register?'create':'get']({publicKey:p}), r=c.response;
+    status.textContent='端末の確認が完了しました。サーバーで署名を確認しています。';
+    const data={id:encode(c.rawId),clientDataJSON:encode(r.clientDataJSON)};
+    if(register)data.label=$('passkey-label').value;
+    if(register)data.attestationObject=encode(r.attestationObject);
+    else Object.assign(data,{authenticatorData:encode(r.authenticatorData),signature:encode(r.signature),userHandle:r.userHandle?encode(r.userHandle):null});
+    data.turnstile_flow=v.turnstile_flow;
+    await call(register?'register_verify':login?'login_verify':'verify_passkey',data);
+  }
+  const ceremony=async(register,login=false)=>{try{await passkey(register,login);}finally{if(window.psTurnstile)window.psTurnstile.reset();}};
+  bind('login-passkey',()=>ceremony(false,true));bind('register',()=>ceremony(true));bind('verify',()=>ceremony(false));
+  bind('claim',async()=>{const ticket=$('ticket').value.trim();$('ticket').value='';await call('claim_ticket',{ticket});});
+  bind('change-password',async()=>{if(!$('new-password').reportValidity())return;const password=$('old-password').value,new_password=$('new-password').value;$('old-password').value='';$('new-password').value='';await call('change_password',{password,new_password});});
+  bind('staff-reauth',async()=>{const password=$('staff-password').value;$('staff-password').value='';await call('reauth',{password});});
+  bind('reauth',async()=>{const password=$('password').value;$('password').value='';await call('reauth',{password});});
+  bind('totp-setup',async()=>{const v=await call('totp_setup');if(typeof v.qr_data_uri!=='string'||!v.qr_data_uri.startsWith('data:image/svg+xml;base64,'))throw new Error('QRコードを表示できません。時間をおいて再度お試しください。');$('totp-qr').src=v.qr_data_uri;$('totp-qr').hidden=false;$('totp-secret').textContent=v.secret;$('totp-link').href=v.provisioning_uri;$('totp-provision').hidden=false;$('totp-setup').textContent='同じQRコードを再表示';return 'QRコードを認証アプリで読み取り、下の欄に6桁コードを入力してください。まだ登録は完了していません。';});
+  bind('totp-verify',async()=>{const code=$('code').value.trim();if(!/^[0-9]{6}$/.test(code))throw new Error('認証アプリに表示された半角数字6桁を入力してください。');if($('totp-provision')&&$('totp-provision').hidden)throw new Error('先に「登録用QRコードを表示」を押し、認証アプリでQRコードを読み取ってください。');const password=$('staff-password')?$('staff-password').value:'';if($('staff-password')&&!password)throw new Error('現在のパスワードも入力してください。変更や再発行の操作ではありません。');$('code').value='';if($('staff-password'))$('staff-password').value='';await call('verify_totp',{code,password});});
+  for(const [fieldId,buttonId]of [['ticket','claim'],['code','totp-verify'],['new-password','change-password'],['staff-password','staff-reauth']]){const field=$(fieldId),button=$(buttonId);if(field&&button)field.addEventListener('keydown',event=>{if(event.key==='Enter'&&!event.repeat){event.preventDefault();if(!button.disabled)button.click();}});}
+  document.querySelectorAll('[data-revoke]').forEach(b=>b.addEventListener('click',async()=>{
+    if(!window.confirm('このパスキーを失効し、ログイン済み端末にも再認証を要求します。よろしいですか？'))return;
+    b.disabled=true;try{await call('revoke',{credential_id:b.dataset.revoke});}catch(e){status.textContent=e.message;b.disabled=false;}
+  }));
+})();
+</script></body></html>

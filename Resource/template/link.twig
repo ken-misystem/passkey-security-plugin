@@ -1,0 +1,45 @@
+<style>
+.ps-entry-wrap{box-sizing:border-box;max-width:1170px;margin:24px auto;padding:0 30px;clear:both}
+.ps-entry-notice{box-sizing:border-box;padding:20px 24px;border:1px solid #c8d2d5;border-left:4px solid #175e68;border-radius:8px;background:#fffefa;color:#203044;text-align:left;line-height:1.8;font-size:15px;overflow-wrap:anywhere}
+.ps-entry-notice h2{margin:0 0 10px;color:#203044;font-size:18px;line-height:1.6;font-weight:bold}
+.ps-entry-notice p{margin:8px 0;color:#203044}.ps-entry-notice ul{margin:8px 0 14px;padding-left:1.4em;color:#203044;list-style:disc}.ps-entry-notice li{list-style:disc;padding:0;margin:5px 0}
+.ps-entry-notice a{color:#125c83;text-decoration:underline;text-underline-offset:3px}.ps-entry-notice .ps-entry-actions{display:flex;flex-wrap:wrap;gap:10px;margin:14px 0}
+.ps-entry-notice .ps-entry-button{display:inline-block;padding:10px 18px;border:1px solid #175e68;border-radius:6px;background:#175e68;color:white;text-decoration:none;font-weight:bold;text-align:center}
+.ps-entry-notice details{border-top:1px solid #d5dee5;margin-top:14px;padding-top:10px}.ps-entry-notice summary{cursor:pointer;color:#203044;font-weight:bold}.ps-entry-notice summary::marker{color:#175e68}
+.ps-entry-notice a:focus-visible,.ps-entry-notice summary:focus-visible{outline:3px solid #b18115;outline-offset:3px}
+@media(max-width:767px){.ps-entry-wrap{padding:0 16px;margin:18px auto}.ps-entry-notice{padding:18px 16px}.ps-entry-notice .ps-entry-actions>a{width:100%}}
+{% if ps_navigation_member %}
+#login-page .c-contentsArea{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,.9fr);align-items:center;gap:24px;max-width:960px;margin:24px auto;padding:0 20px}
+#login-page .ps-entry-wrap{grid-column:2;grid-row:1;max-width:none;margin:0;padding:0}
+#login-page .ps-entry-notice{padding:20px;line-height:1.65;font-size:14px}
+#login-page .ps-entry-notice h2{font-size:19px;margin-bottom:10px}
+#login-page .ps-entry-notice .ps-entry-actions{gap:12px;margin-bottom:0}
+#login-page .ps-entry-notice .ps-entry-button{width:100%;padding:10px 12px}
+#login-page .ps-entry-wrap+.container{grid-column:1;grid-row:1;max-width:none;width:100%;padding:0;margin:0!important}
+#login-page .ps-entry-wrap+.container>.row{margin:0}
+#login-page .ps-entry-wrap+.container>.row>[class*=col-]{width:100%;max-width:100%;flex:0 0 100%;margin-left:0;padding:0}
+#login-page .ps-entry-wrap+.container .text-center.p-5{padding:24px!important;border:1px solid #d5dee5;border-radius:12px;box-shadow:0 4px 14px #20304408}
+#login-page .ps-entry-wrap+.container .ps-turnstile{margin:10px 0}
+#login-page .ps-entry-wrap+.container .text-center.mt-3{margin:12px 0 0!important;font-size:12px}
+@media(max-width:767px){ #login-page .c-contentsArea{grid-template-columns:1fr;max-width:500px;margin:16px auto;padding:0 14px;gap:16px}#login-page .ps-entry-wrap{grid-column:1;grid-row:2}#login-page .ps-entry-wrap+.container{grid-row:1}#login-page .ps-entry-notice{padding:16px}#login-page .ps-entry-notice .ps-entry-actions>a{width:auto}#login-page .ps-entry-wrap+.container .text-center.p-5{padding:20px!important}}
+@media(max-width:360px){ #login-page .c-contentsArea{padding:0 8px} #login-page .ps-entry-wrap+.container .ps-turnstile{margin-left:-20px;margin-right:-20px;max-width:none}}
+{% endif %}
+</style>
+<aside class="ps-entry-wrap" aria-labelledby="ps-entry-title"><div class="ps-entry-notice">
+{% if ps_navigation_member %}
+<h2 id="ps-entry-title">管理画面のログイン</h2>
+<p>初めての方は管理者から教わったID・パスワードでログインし、メール確認・コード入力・ログイン方法の登録へ進みます。パスキーは登録済みの方だけが使えます。</p>
+<div class="ps-entry-actions"><a class="ps-entry-button" href="{{ path('ps_member') }}">登録済みのパスキーでログイン</a><a class="ps-entry-button" id="native-initial-request" href="{{ path('ps_staff_initial_request') }}">初回登録リンク・コードを依頼する</a><a href="{{ path('ps_staff_password_reset') }}">パスワードをお忘れの方</a></div>
+{% else %}
+<h2 id="ps-entry-title">サイト再開に伴うログインのご案内</h2>
+<ul><li>以前からの会員様は、初回ログイン前に<a href="{{ path('forgot') }}">パスワードの再設定</a>をお願いします。再設定がお済みなら繰り返す必要はありません。</li><li>パスキー登録は任意です。ログイン後、会員メニューの「パスキー設定」から登録できます。</li></ul>
+{% if ps_navigation_login %}<div class="ps-entry-actions"><a class="ps-entry-button" href="{{ path('ps_customer') }}">登録済みのパスキーでログイン</a></div><p>自動ログインは使用しません。次回もパスワードまたはパスキーでログインしてください。</p>{% endif %}
+{% endif %}
+{% if ps_navigation_email_help %}<details><summary>以前のメールアドレスが使えない方へ</summary><p><a href="{{ path('ps_email_help') }}">メールアドレスによるログイン・再設定ができない場合のご案内</a></p></details>{% endif %}
+</div></aside>
+
+{% if ps_navigation_member and app is defined and app.request is not null and app.request.hasSession %}
+{% set initial_hint = app.request.session.get('ps_staff_initial_hint') %}
+{% if initial_hint and initial_hint.at >= 'now'|date('U') - 1800 and initial_hint.at <= 'now'|date('U') %}
+<script>(()=>{const login={{ initial_hint.login|json_encode(15)|raw }};const fill=()=>{const field=document.getElementById('login_id');if(field&&!field.value)field.value=login;};if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',fill,{once:true});else fill();})();</script>
+{% endif %}{% endif %}

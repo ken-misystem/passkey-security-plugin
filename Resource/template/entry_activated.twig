@@ -1,0 +1,3 @@
+{% extends 'default_frame.twig' %}
+{% set body_class = 'registration_page' %}
+{% block main %}<div class="ec-role"><div class="ec-pageHeader"><h1>会員登録が完了しました</h1></div><div class="ec-registerCompleteRole"><h2>ご登録ありがとうございます</h2><p>メールアドレスの確認ができました。登録時のメールアドレスとパスワードでログインしてください。</p><p>新規登録した方は、パスワードを再設定する必要はありません。パスキーはログイン後に任意で登録できます。</p><div class="ec-off4Grid"><div class="ec-off4Grid__cell"><a class="ec-blockBtn--action" id="entry-login" href="{{ path('mypage') }}">ログインして利用を始める</a>{% if qtyInCart %}<a class="ec-blockBtn--cancel" href="{{ path('cart') }}">カートへ進む</a>{% endif %}<a class="ec-blockBtn--cancel" href="{{ path('homepage') }}">トップページへ</a></div></div></div></div>{% endblock %}

@@ -1,0 +1,65 @@
+parameters:
+    passkey_turnstile_config_default: '/run/eccube-private/passkey/turnstile.json'
+
+services:
+    _defaults:
+        autowire: true
+        autoconfigure: true
+
+    Plugin\PasskeySecurity\Resource\Runtime\StaffMailStore: ~
+    Plugin\PasskeySecurity\Resource\Runtime\InitialLink: ~
+    Plugin\PasskeySecurity\Resource\Runtime\StaffMail: ~
+    Plugin\PasskeySecurity\Resource\Runtime\StaffMailAdminAccess: ~
+    Plugin\PasskeySecurity\Resource\Runtime\StaffMfaState: ~
+    Plugin\PasskeySecurity\Resource\Runtime\StorePresentation:
+        arguments:
+            $assets: '@assets.packages'
+            $publicDir: '%eccube_html_dir%'
+    Plugin\PasskeySecurity\Resource\Turnstile\Configuration:
+        arguments:
+            $path: '%env(default:passkey_turnstile_config_default:TURNSTILE_CONFIG)%'
+    Plugin\PasskeySecurity\Resource\Turnstile\Gateway: ~
+    Plugin\PasskeySecurity\Resource\Turnstile\Verifier: ~
+
+    Plugin\PasskeySecurity\Controller\CustomerRegistrationController:
+        tags: ['controller.service_arguments']
+    Plugin\PasskeySecurity\Controller\EmailHelpController:
+        tags: ['controller.service_arguments']
+    Plugin\PasskeySecurity\Controller\InitialLinkController:
+        arguments:
+            $memberAuthenticator: '@security.authenticator.form_login.admin'
+        tags: ['controller.service_arguments']
+    Plugin\PasskeySecurity\Controller\LegacySecurityController:
+        arguments:
+            $customerAuthenticator: '@security.authenticator.form_login.customer'
+            $memberAuthenticator: '@security.authenticator.form_login.admin'
+        tags: ['controller.service_arguments']
+    Plugin\PasskeySecurity\Controller\StaffMailController:
+        tags: ['controller.service_arguments']
+    Plugin\PasskeySecurity\Controller\StaffMailAdminController:
+        tags: ['controller.service_arguments']
+    Plugin\PasskeySecurity\Controller\VisitController:
+        tags: ['controller.service_arguments']
+
+    Plugin\PasskeySecurity\EventSubscriber\CustomerRegistrationSubscriber: ~
+    Plugin\PasskeySecurity\EventSubscriber\LegacyEmailSubscriber: ~
+    Plugin\PasskeySecurity\EventSubscriber\NavigationSubscriber: ~
+    Plugin\PasskeySecurity\EventSubscriber\PasswordHelpSubscriber: ~
+    Plugin\PasskeySecurity\EventSubscriber\SecuritySubscriber: ~
+    Plugin\PasskeySecurity\EventSubscriber\StaffMailMemberSubscriber: ~
+    Plugin\PasskeySecurity\EventSubscriber\StaffMailSubscriber: ~
+    Plugin\PasskeySecurity\EventSubscriber\StaffMfaDisplaySubscriber: ~
+    Plugin\PasskeySecurity\EventSubscriber\TurnstileSubscriber: ~
+
+    Plugin\PasskeySecurity\Form\MailboxTypeExtension: ~
+    Plugin\PasskeySecurity\Form\PasswordPolicyExtension: ~
+    Plugin\PasskeySecurity\Form\PasswordResetExtension: ~
+    Plugin\PasskeySecurity\Form\StaffMailAdminTypeExtension: ~
+    Plugin\PasskeySecurity\Form\StaffMfaTypeExtension: ~
+
+    Plugin\PasskeySecurity\Command\PolicyCommand:
+        arguments:
+            $projectDir: '%kernel.project_dir%'
+    Plugin\PasskeySecurity\Command\StaffMailCommand:
+        arguments:
+            $projectDir: '%kernel.project_dir%'

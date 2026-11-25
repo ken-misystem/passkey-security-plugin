@@ -27,6 +27,7 @@ final class PublicSubscriber implements EventSubscriberInterface
     }
     public function navigation(TemplateEvent $e):void
     {
+        if ($this->config->shopEditionActive()) return;
         if(!$this->settings->ready())return;
         $e->setParameter('ps_public_staff',str_starts_with($e->getView(),'@admin/'));
         if($e->getView()==='Mypage/navi.twig'){
@@ -36,6 +37,7 @@ final class PublicSubscriber implements EventSubscriberInterface
     }
     public function passport(CheckPassportEvent $e):void
     {
+        if ($this->config->shopEditionActive()) return;
         if(!$this->settings->ready())return;
         $u=$e->getPassport()->getUser();
         if($u instanceof Customer&&$this->store->resetRequired(Policy::subject($u)))
@@ -43,6 +45,7 @@ final class PublicSubscriber implements EventSubscriberInterface
     }
     public function login(LoginSuccessEvent $e):void
     {
+        if ($this->config->shopEditionActive()) return;
         if(!$this->settings->ready())return;
         $u=$e->getUser();$s=$e->getRequest()->getSession();Policy::clear($s);
         $badge=\Symfony\Component\Security\Http\Authenticator\Passport\Credentials\PasswordCredentials::class;
@@ -56,18 +59,22 @@ final class PublicSubscriber implements EventSubscriberInterface
     public function guard(RequestEvent $e):void
     {
         if(!$e->isMainRequest())return;
+        if ($this->config->shopEditionActive()) return;
         $r=$e->getRequest();$u=$this->tokens->getToken()?->getUser();
         if(!$this->settings->ready())return; // Fresh install leaves native store/login untouched.
         if(!($u instanceof Customer)&&!($u instanceof Member))return;
         $route=$r->attributes->get('_route');
+        // The settings controller checks authorization and resumes its own MFA-protected operation.
+        if ($route === 'passkey_security_admin_config' && $u instanceof Member) return;
         if(in_array($route,['ps_customer','ps_member','logout','admin_logout','admin_login'],true))return;
         if($u instanceof Customer){
-            if(!$this->store->resetRequired(Policy::subject($u)))return;
-            $this->tokens->setToken(null);if($r->hasSession())$r->getSession()->invalidate();$target='forgot';
+            $reset=$this->store->resetRequired(Policy::subject($u));
+            if(!$reset&&(!$this->settings->migrated()||($r->hasSession()&&$this->policy->complete($r->getSession(),$u,time()))))return;
+            $this->tokens->setToken(null);if($r->hasSession())$r->getSession()->invalidate();$target=$reset?'forgot':'mypage_login';
         }else{
             try{
                 if(!$this->publicPolicy->mustAuthenticate($u))return;
-                if($r->hasSession()&&$this->policy->complete($r->getSession(),$u,time()))return;
+                if($r->hasSession()&&$this->policy->staffAccess($r->getSession(),$u,time()))return;
                 // EC-CUBE checks native 2FA after this listener, including on ps_member.
                 if(($route==='admin_two_factor_auth'||($route==='admin_two_factor_auth_set'&&!$u->getTwoFactorAuthKey()))
                     &&$u->isTwoFactorAuthEnabled()&&$this->twoFactorAuth->isEnabled()&&!$this->twoFactorAuth->isAuth($u))return;
@@ -88,9 +95,15 @@ final class PublicSubscriber implements EventSubscriberInterface
         $e->setResponse(in_array($r->getMethod(),['GET','HEAD'],true)?new RedirectResponse($this->urls->generate($target),303)
             :new Response('追加認証が必要です。画面を開き直してください。',403,['Cache-Control'=>'no-store']));
     }
-    public function logout(LogoutEvent $e):void{if($e->getRequest()->hasSession())Policy::clear($e->getRequest()->getSession());}
+    public function logout(LogoutEvent $e):void
+    {
+        if (!$this->config->shopEditionActive() && $e->getRequest()->hasSession()) {
+            Policy::clear($e->getRequest()->getSession());
+        }
+    }
     public function reset(EventArgs $e):void
     {
+        if ($this->config->shopEditionActive()) return;
         if($this->settings->ready()){$u=$e->getArgument('Customer');$this->store->passwordReset(Policy::subject($u),(string)$u->getPassword());}
     }
 }

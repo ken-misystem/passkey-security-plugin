@@ -1,0 +1,33 @@
+<div class="customer-login-shell">
+<header class="customer-login-heading">
+<p class="eyebrow">会員ログイン</p>
+<h1>パスキーでログイン</h1>
+<p class="lead">登録済みの端末で、指紋・顔認証やPINを使ってログインできます。</p>
+</header>
+<section class="card customer-login-card" aria-labelledby="customer-login-operation">
+<h2 id="customer-login-operation">登録済みのパスキーを使う</h2>
+<p class="customer-login-instruction">ボタンを押して、端末に表示される案内に従ってください。</p>
+<button type="button" id="login-passkey">パスキーでログインする</button>
+<p id="status" class="status" role="status" aria-live="polite" tabindex="-1"></p>
+</section>
+<nav class="customer-login-alternatives" aria-label="別のログイン方法">
+<a id="security-back" class="button secondary" href="{{ login_url }}">パスワードでログイン</a>
+<a href="{{ path('forgot') }}">パスワードをお忘れの方</a>
+</nav>
+<details class="customer-login-help">
+<summary>ヘルプ：初めて使う方・パスキーを登録していない方</summary>
+<div class="help-body"><ul>
+<li>パスキーの登録は任意です。パスワードでもログインできます。</li>
+<li>登録する場合は、パスワードでログインしたあと、マイページの「パスキー設定」へ進んでください。</li>
+<li>安全性を高めるために、パスキーの登録をお願いします。</li>
+</ul></div>
+</details>
+<details class="customer-login-help">
+<summary>ヘルプ：以前からの会員様・ログインでお困りの方</summary>
+<div class="help-body"><ul>
+<li>サイト再開後、初回ログイン前にパスワードの再設定が必要です。再設定がお済みなら繰り返す必要はありません。</li>
+<li>パスキーが使えない場合は、「パスワードでログイン」をお試しください。</li>
+</ul><a href="{{ path('forgot') }}">パスワードを再設定する</a></div>
+</details>
+<p class="footer">操作でお困りの場合は店舗へご連絡ください。パスワード・確認コードは送らないでください。</p>
+</div>

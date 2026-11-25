@@ -1,0 +1,10 @@
+<div class="ps-staff-mfa-state" data-ready="{{ ps_staff_mfa.ready ? '1':'0' }}" data-known="{{ ps_staff_mfa.known ? '1':'0' }}">
+{% if not ps_staff_mfa.known %}<span class="badge bg-warning text-dark">状態を確認できません</span><p class="small mb-1">追加認証は必須です。管理担当者へご連絡ください。</p>
+{% elseif ps_staff_mfa.inactive %}<span class="badge bg-secondary">非稼働（ログイン不可）</span>
+{% elseif ps_staff_mfa.ready %}<span class="badge bg-success">有効</span><div class="small mt-1">{{ ps_staff_mfa.passkey_count > 0 ? 'パスキー登録済み' : '' }}{{ ps_staff_mfa.passkey_count > 0 and ps_staff_mfa.totp ? ' / ' : '' }}{{ ps_staff_mfa.totp ? '認証アプリ登録済み' : '' }}</div>
+{% else %}<span class="badge bg-warning text-dark">必須・登録待ち</span><p class="small mb-1">{{ ps_staff_mfa.new ? '作成後、本人が初回ログイン時に登録します。' : '本人が初回ログイン時に登録してください。' }}</p>{% endif %}
+{% if ps_staff_mfa.password_change_required %}<p class="small mb-1">パスワードの再設定も必要です。</p>{% endif %}
+{% if ps_staff_mfa_edit|default(false) %}<ul class="small mt-2 mb-2"><li>パスキー、またはパスワード＋認証アプリが必須です。</li><li>登録と確認が完了すると自動で有効になります。別途ONにする操作はありません。</li><li>未登録のまま、パスワードだけで管理画面へ入ることはできません。</li></ul>
+{% if form.vars.value.id is not empty and form.vars.value.id == app.user.id %}<a class="btn btn-outline-primary btn-sm" href="{{ path('ps_member') }}">自分のパスキー・認証アプリを登録／管理</a>{% else %}<p class="small text-muted mb-0">認証器の登録はスタッフ本人が行います。管理担当者が代わりに登録する必要はありません。</p>{% endif %}
+{% endif %}
+</div>

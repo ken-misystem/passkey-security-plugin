@@ -1,0 +1,11 @@
+{% macro badges(name, ios, android, appearance) %}
+<div class="app-download"><h4>{{ name }}</h4><div class="store-links">
+<a href="{{ ios }}" target="_blank" rel="noopener noreferrer" aria-label="{{ name }}をApp Storeで入手（iPhone・iPad／新しいタブ）"><span>iPhone・iPad</span>{% if appearance.app_store %}<img width="132" height="44" src="{{ appearance.app_store }}" alt="App Storeで入手">{% endif %}</a>
+<a href="{{ android }}" target="_blank" rel="noopener noreferrer" aria-label="{{ name }}をGoogle Playで入手（Android／新しいタブ）"><span>Android</span>{% if appearance.google_play %}<img width="132" height="44" src="{{ appearance.google_play }}" alt="Google Playで手に入れよう">{% endif %}</a>
+</div></div>
+{% endmacro %}
+<div class="downloads">
+{% set appearance = passkey_store_appearance() %}
+{{ _self.badges('Google Authenticator','https://apps.apple.com/jp/app/google-authenticator/id388497605','https://play.google.com/store/apps/details?id=com.google.android.apps.authenticator2&hl=ja', appearance) }}
+{{ _self.badges('Microsoft Authenticator','https://apps.apple.com/jp/app/microsoft-authenticator/id983156458','https://play.google.com/store/apps/details?id=com.azure.authenticator&hl=ja', appearance) }}
+</div>

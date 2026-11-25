@@ -16,7 +16,7 @@ final class PublicPolicy
     }
     public function mustAuthenticate(object $u):bool
     {
-        return $u instanceof Member&&($this->enrolled($u)||$this->settings->required()
+        return $u instanceof Member&&($this->enrolled($u)||$this->settings->required()||$this->settings->staffPasskeyRequired()
             ||$this->store->resetRequired(Policy::subject($u)));
     }
     public function enrollment(SessionInterface $session,object $u,int $now):int
@@ -26,7 +26,7 @@ final class PublicPolicy
         // New optional users may enroll after a fresh password check. Established factors
         // still require their original MFA or a separately issued recovery ticket.
         $name=$u instanceof Member?'password':'reauth';
-        if($u instanceof Member&&($this->enrolled($u)||!$this->store->publicInitialEligible($subject))){
+        if($u instanceof Member&&($this->settings->migrated()||$this->enrolled($u)||!$this->store->publicInitialEligible($subject))){
             if($this->policy->fresh($session,$u,'enroll',$now,600))$name='enroll';
             else $name=$this->policy->staffProof($session,$u,$now);
         }

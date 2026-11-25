@@ -1,1 +1,129 @@
-<!doctype html><html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>パスキー設定</title>{% include '@PasskeySecurity/public_style.twig' %}</head><body><header>PasskeySecurity 設定</header><main><h1>安全な初期設定</h1><nav><a href="{{ path('admin_store_plugin') }}">プラグイン一覧へ戻る</a>{% if ready %}<a href="{{ path('ps_member') }}">自分のパスキー・認証アプリを登録する</a>{% endif %}</nav><section><ul><li>会員のパスキー登録は任意です。従来のパスワードで引き続きログインできます。</li><li>スタッフも初期状態は任意です。追加認証を登録したアカウントは、自動でその認証が必要になります。</li><li>全スタッフの必須化は、ご自身の追加認証を登録・確認してから有効にできます。</li><li>導入だけでパスワードの一斉変更やメール送信は行いません。</li></ul></section>{% if message %}<p role="status" class="notice">{{ message }}</p>{% endif %}<form method="post"><input type="hidden" name="_token" value="{{ csrf_token('ps_public_config') }}"><section><label for="origin">この店舗のHTTPS URL</label><input id="origin" name="origin" value="{{ origin }}" required{% if ready %} readonly{% endif %}><p>例：https://shop.example.com 。登録後のドメイン変更は、パスキーが使えなくなるため別途移行が必要です。</p><label for="name">認証時に表示する店舗名</label><input id="name" name="name" value="{{ name }}" maxlength="80" required><label><input type="checkbox" name="staff_required" value="1"{% if required %} checked{% endif %}> すべてのスタッフの追加認証を必須にする</label><p>未登録のスタッフは、次回ログイン時に登録が必要になります。登録済みの方の保護は、このチェックを外しても継続します。</p><label for="password">変更する管理者ご本人の現在のパスワード</label><input id="password" type="password" name="password" autocomplete="current-password" required><button>設定を保存する</button></section></form></main></body></html>
+<!doctype html>
+<html lang="ja">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>PasskeySecurity 設定</title>
+    {% include '@PasskeySecurity/public_style.twig' %}
+{% include '@PasskeySecurity/favicon.twig' %}</head>
+<body>
+<header>PasskeySecurity</header>
+<main>
+    <h1>パスキー・追加認証の設定</h1>
+    <nav>
+        <a href="{{ path('admin_store_plugin') }}">プラグイン一覧へ戻る</a>
+        {% if ready %}
+            <a href="{{ path('ps_member') }}">自分のパスキー・認証アプリを確認する</a>
+        {% endif %}
+    </nav>
+    {% if message %}<p role="status" class="notice">{{ message }}</p>{% endif %}
+    {% if resume_token %}
+        <form id="resume-settings" action="{{ path('passkey_security_admin_config') }}" method="post">
+            <input type="hidden" name="_token" value="{{ csrf_token('ps_public_config') }}">
+            <input type="hidden" name="resume_token" value="{{ resume_token }}">
+            {% if turnstile_check_site %}
+                <h2>新しいTurnstileキーの確認</h2>
+                <p>確認が通過した時点で設定に反映します。</p>
+                <div id="key-check" data-sitekey="{{ turnstile_check_site }}" data-action="{{ turnstile_check_action }}"></div>
+                <p id="key-check-status" role="status">安全確認を読み込んでいます。</p>
+                <input type="hidden" name="turnstile_check_token" id="turnstile-check-token">
+                <button type="submit" id="key-check-submit" disabled>確認して保存する</button>
+                <a href="{{ path('passkey_security_admin_config') }}">設定入力へ戻る</a>
+            {% else %}
+                <p role="status">本人確認が完了しました。設定の保存を続けます。</p>
+                <button type="submit">設定の保存を続ける</button>
+            {% endif %}
+        </form>
+        {% if turnstile_check_site %}
+            <script nonce="{{ nonce }}">
+                window.passkeySettingsCheck = () => {
+                    const widget = document.getElementById('key-check');
+                    const status = document.getElementById('key-check-status');
+                    const field = document.getElementById('turnstile-check-token');
+                    const submit = document.getElementById('key-check-submit');
+                    function reject() {
+                        field.value = '';
+                        submit.disabled = true;
+                        status.textContent = '確認を完了できませんでした。設定入力へ戻ってキーを確認してください。';
+                    }
+                    window.turnstile.render(widget, {
+                        sitekey: widget.dataset.sitekey, action: widget.dataset.action, 'response-field': false,
+                        callback: (token) => {
+                            field.value = token;
+                            submit.disabled = false;
+                            status.textContent = '安全確認が完了しました。設定を保存できます。';
+                        },
+                        'error-callback': reject,
+                        'expired-callback': reject
+                    });
+                };
+            </script>
+            <script nonce="{{ nonce }}" src="https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit&amp;onload=passkeySettingsCheck" async defer></script>
+        {% else %}
+            <script nonce="{{ nonce }}">document.getElementById('resume-settings').requestSubmit();</script>
+        {% endif %}
+    {% else %}
+    <form action="{{ path('passkey_security_admin_config') }}" method="post">
+        <input type="hidden" name="_token" value="{{ csrf_token('ps_public_config') }}">
+        <section>
+            <h2>店舗の表示</h2>
+            <label for="origin">この店舗のHTTPS URL</label>
+            <input id="origin" name="origin" value="{{ origin }}" required{% if ready %} readonly{% endif %}>
+            {% if ready %}
+                <p>パスキーに登録済みのURLです。変更には移行手順が必要です。</p>
+            {% else %}
+                <p>例 https://shop.example.com</p>
+            {% endif %}
+            <label for="name">認証時に表示する店舗名</label>
+            <input id="name" name="name" value="{{ name }}" maxlength="80" required>
+        </section>
+        <section>
+            <h2>スタッフの追加認証</h2>
+            {% if shop %}
+                <p>すべてのスタッフの追加認証が必須です。</p>
+            {% else %}
+                <label><input type="checkbox" name="staff_required" value="1"{% if required %} checked{% endif %}>
+                    すべてのスタッフの追加認証を必須にする</label>
+                <p>未登録のスタッフは次回ログイン時に登録が必要になります。登録済みのスタッフの保護は継続します。</p>
+            {% endif %}
+            {% if ready %}
+                <label for="staff_passkey_required">スタッフの管理画面ログイン</label>
+                <select id="staff_passkey_required" name="staff_passkey_required">
+                    <option value="0"{% if not staff_passkey_required %} selected{% endif %}>パスキーまたは認証アプリで追加認証</option>
+                    <option value="1"{% if staff_passkey_required %} selected{% endif %}>パスキーを必須にする</option>
+                </select>
+                <p>稼働中のスタッフでパスキー未登録の人数は{{ staff_without_passkey }}人です。
+                    パスキーを必須にするには全員の登録が必要です。</p>
+            {% endif %}
+            <label for="staff_session_hours">追加認証の保持時間</label>
+            <select id="staff_session_hours" name="staff_session_hours" aria-describedby="staff_session_help">
+                {% for hours in staff_session_options %}
+                    <option value="{{ hours }}"{% if hours == staff_session_hours %} selected{% endif %}>{{ hours }}時間{% if hours == 1 %}（既定）{% endif %}</option>
+                {% endfor %}
+            </select>
+            <p id="staff_session_help">日常の管理画面を利用できる時間を、追加認証を済ませた時点から数えます。EC-CUBEのセッションが先に切れた場合は、そこで再ログインが必要です。</p>
+        </section>
+        {% if turnstile_timeouts %}
+            <section>
+                <h2>Turnstile</h2>
+                <label for="turnstile_site_key">新しいサイトキー</label>
+                <input id="turnstile_site_key" name="turnstile_site_key" maxlength="200" autocomplete="off">
+                <label for="turnstile_secret_key">新しいシークレットキー</label>
+                <input type="password" id="turnstile_secret_key" name="turnstile_secret_key" maxlength="200" autocomplete="off">
+                <p>キーを更新する場合は両方を入力してください。空欄の場合は現在のキーを使います。</p>
+                <label for="turnstile_browser_seconds">フォームの確認を待つ時間（秒）</label>
+                <input type="number" id="turnstile_browser_seconds" name="turnstile_browser_seconds" min="5" max="60"
+                    value="{{ turnstile_timeouts.browser }}" required>
+                <label for="turnstile_gateway_seconds">検証サービスの応答を待つ時間（秒）</label>
+                <input type="number" id="turnstile_gateway_seconds" name="turnstile_gateway_seconds" min="2" max="10"
+                    value="{{ turnstile_timeouts.gateway }}" required>
+            </section>
+        {% endif %}
+        <section>
+            <button type="submit">設定を保存する</button>
+        </section>
+    </form>
+    {% endif %}
+</main>
+</body>
+</html>

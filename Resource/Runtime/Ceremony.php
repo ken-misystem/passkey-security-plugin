@@ -15,7 +15,7 @@ final class Ceremony
         if ($raw === false || self::encode($raw) !== $encoded) throw new \RuntimeException('security_binary_invalid');
         return $raw;
     }
-    public function handle(string $subject): string { return hash_hmac('sha256', 'handle:'.$subject, $this->config->key(), true); }
+    public function handle(string $subject): string { return $this->config->digest('handle:'.$subject, true); }
     private function server(): \lbuchs\WebAuthn\WebAuthn
     {
         Config::dependencies(); $d = $this->config->data();
