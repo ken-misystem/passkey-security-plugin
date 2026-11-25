@@ -1,0 +1,22 @@
+{
+    "name": "yaruani/passkey-security",
+    "description": "EC-CUBE optional customer passkeys and configurable staff WebAuthn/TOTP authentication",
+    "version": "1.0.0-dev",
+    "type": "eccube-plugin",
+    "license": "MIT",
+    "require": {
+        "php": "^8.3",
+        "ext-openssl": "*",
+        "ext-sodium": "*",
+        "doctrine/dbal": "^3.10",
+        "ext-mbstring": "*"
+    },
+    "autoload": {
+        "psr-4": {
+            "Plugin\\PasskeySecurity\\": ""
+        }
+    },
+    "extra": {
+        "code": "PasskeySecurity"
+    }
+}

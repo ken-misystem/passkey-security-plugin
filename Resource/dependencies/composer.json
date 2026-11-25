@@ -1,0 +1,6 @@
+{
+    "require": {
+        "lbuchs/webauthn": "2.2.0",
+        "spomky-labs/otphp": "^11.3"
+    }
+}
